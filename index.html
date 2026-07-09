@@ -171,6 +171,19 @@
   }
   .stat-row .count{ font-weight:700; color:var(--teal); }
 
+  .request-link{
+    display:inline-block;
+    margin-top:16px;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--teal);
+    text-decoration:none;
+    border-bottom:1.5px solid var(--teal);
+    padding-bottom:1px;
+  }
+  .request-link:hover{ color:var(--coral); border-color:var(--coral); }
+  .request-row{ text-align:center; }
+
   footer{ text-align:center; font-size:12px; color:var(--muted); padding:22px 14px 30px; line-height:1.6; }
 </style>
 </head>
@@ -191,6 +204,7 @@
   <div class="empty-state" id="emptyState" style="display:none;">
     <div class="big">Aucun résultat</div>
     <div>Essayez moins de mots, ou vérifiez l'orthographe du nom du produit.</div>
+    <a class="request-link" href="demande_ajout.html" target="_blank" rel="noopener">Demander l'ajout de ce produit &#8594;</a>
   </div>
 
   <div id="hintState">
@@ -230,6 +244,7 @@
     </div>
 
     <p class="stat-row"><span class="count" id="totalCount">0</span> fiches de produits disponibles</p>
+    <p class="request-row"><a class="request-link" href="demande_ajout.html" target="_blank" rel="noopener">Vous ne trouvez pas un produit? Faites une demande d'ajout &#8594;</a></p>
   </div>
 </main>
 
