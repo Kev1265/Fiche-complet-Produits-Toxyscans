@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Recherche de fiches produits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#00879A;
+    --teal-dark:#046374;
+    --coral:#EA4C74;
+    --coral-light:#FBE6EC;
+    --ink:#1B2B3A;
+    --paper:#F6F9FA;
+    --card:#FFFFFF;
+    --line:#E2E9EB;
+    --muted:#63767E;
+    --focus:#00879A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  header{
+    background:linear-gradient(120deg, var(--teal) 0%, var(--teal-dark) 55%, var(--coral) 130%);
+    color:#fff;
+    padding:26px 18px 28px;
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  .eyebrow{
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.85);
+    margin:0 0 6px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:7px;height:7px;
+    background:#fff;
+    border-radius:50%;
+    display:inline-block;
+  }
+  h1{
+    font-family:'Poppins',sans-serif;
+    font-weight:700;
+    font-size:24px;
+    letter-spacing:.01em;
+    margin:0 0 16px;
+  }
+
+  .search-wrap{ position:relative; }
+  #search{
+    width:100%;
+    font-size:17px;
+    font-family:'Inter',sans-serif;
+    padding:14px 44px 14px 16px;
+    border-radius:10px;
+    border:none;
+    outline:none;
+    background:#fff;
+    color:var(--ink);
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+  }
+  #search:focus{ box-shadow:0 0 0 3px rgba(255,255,255,.55); }
+  #search::placeholder{ color:var(--muted); }
+  #clearBtn{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer;
+    padding:6px 8px; display:none;
+  }
+
+  main{ max-width:720px; margin:0 auto; padding:16px 14px 60px; }
+  .result-count{ font-size:13px; color:var(--muted); font-weight:600; margin:6px 4px 14px; letter-spacing:.02em; }
+  ul#results{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-left:5px solid var(--teal);
+    border-radius:12px; padding:15px 16px; display:flex; align-items:center; justify-content:space-between;
+    gap:12px; text-decoration:none; color:inherit; transition:transform .08s ease, box-shadow .08s ease, border-color .08s ease;
+  }
+  .card:active{ transform:scale(0.99); }
+  .card:hover{ box-shadow:0 4px 16px rgba(0,135,154,0.12); border-left-color:var(--coral); }
+  .card-name{
+    font-family:'Poppins',sans-serif; font-weight:600; font-size:15.5px; margin:0;
+    overflow-wrap:break-word; line-height:1.35; color:var(--ink);
+  }
+  .card-name mark{ background:var(--coral-light); color:var(--coral); border-radius:3px; font-weight:700; }
+  .arrow{ flex-shrink:0; font-size:20px; color:var(--teal); }
+
+  .empty-state{ text-align:center; padding:56px 20px; color:var(--muted); }
+  .empty-state .big{ font-family:'Poppins',sans-serif; font-weight:600; font-size:18px; color:var(--ink); margin-bottom:8px; }
+
+  /* ---------- Landing / onboarding state ---------- */
+  #hintState{ display:block; }
+  .intro-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 20px;
+    margin-bottom:18px;
+    text-align:center;
+  }
+  .intro-card h2{
+    font-family:'Poppins',sans-serif;
+    font-size:18px;
+    font-weight:600;
+    margin:0 0 8px;
+    color:var(--ink);
+  }
+  .intro-card p{
+    font-size:14px;
+    color:var(--muted);
+    line-height:1.55;
+    margin:0;
+    max-width:480px;
+    margin-inline:auto;
+  }
+
+  .steps{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .step{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .step-icon{
+    flex-shrink:0;
+    width:38px; height:38px;
+    border-radius:50%;
+    background:var(--coral-light);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--coral);
+  }
+  .step:nth-child(2) .step-icon{ background:#E1F2F5; color:var(--teal); }
+  .step:nth-child(3) .step-icon{ background:#FFF3D9; color:#B8860B; }
+  .step-icon svg{ width:19px; height:19px; }
+  .step-text{ flex:1; }
+  .step-num{
+    font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 2px;
+  }
+  .step-desc{ font-size:14px; font-weight:600; color:var(--ink); margin:0; line-height:1.3; }
+
+  .stat-row{
+    text-align:center;
+    font-size:13px;
+    color:var(--muted);
+    padding:4px 0 2px;
+  }
+  .stat-row .count{ font-weight:700; color:var(--teal); }
+
+  footer{ text-align:center; font-size:12px; color:var(--muted); padding:22px 14px 30px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Scannez &middot; Cherchez &middot; Restez en sécurité</p>
+  <h1>Recherche de fiches produits</h1>
+  <div class="search-wrap">
+    <input id="search" type="text" placeholder="Tapez le nom d'un produit…" autofocus autocomplete="off">
+    <button id="clearBtn" aria-label="Effacer la recherche">&times;</button>
+  </div>
+</header>
+
+<main>
+  <p class="result-count" id="resultCount"></p>
+  <ul id="results"></ul>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="big">Aucun résultat</div>
+    <div>Essayez moins de mots, ou vérifiez l'orthographe du nom du produit.</div>
+  </div>
+
+  <div id="hintState">
+    <div class="intro-card">
+      <h2>Trouvez rapidement la bonne fiche</h2>
+      <p>Cette page remplace le classeur papier. Si vous êtes entré en contact avec un produit ou devez le nettoyer, cherchez son nom ci-dessus pour accéder directement à sa fiche &mdash; incluant l'équipement de protection (EPI) requis et la marche à suivre.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <span class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </span>
+        <span class="step-text">
+          <p class="step-num">Étape 1</p>
+          <p class="step-desc">Tapez le nom du produit dans la barre de recherche</p>
+        </span>
+      </div>
+      <div class="step">
+        <span class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        </span>
+        <span class="step-text">
+          <p class="step-num">Étape 2</p>
+          <p class="step-desc">Sélectionnez le produit dans la liste de résultats</p>
+        </span>
+      </div>
+      <div class="step">
+        <span class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 6v6c0 5 4 8.5 9 10 5-1.5 9-5 9-10V6z"></path></svg>
+        </span>
+        <span class="step-text">
+          <p class="step-num">Étape 3</p>
+          <p class="step-desc">Consultez l'EPI requis et les consignes de nettoyage</p>
+        </span>
+      </div>
+    </div>
+
+    <p class="stat-row"><span class="count" id="totalCount">0</span> fiches de produits disponibles</p>
+  </div>
+</main>
+
+<footer>
+  Les fiches sont hébergées sur Toxyscan.<br>
+  Cette page vous aide seulement à trouver la bonne fiche, rapidement.
+</footer>
+
+<script>
+const PRODUCTS = [{"name": "101950 Mulco Flextra Thermoplastic Multipurpose Exterior Extra-Durable Sealant Black", "url": "https://toxyscansoftware.net/fiche/306/306276_fr.pdf"}, {"name": "111000 Mulco Silicone Universal Translucent", "url": "https://toxyscansoftware.net/fiche/430/430044_fr.pdf"}, {"name": "130010 Mulco Crack and Gap Filler Acrylic Latex Sealant White", "url": "https://toxyscansoftware.net/fiche/410/410052_fr.pdf"}, {"name": "141000 Mulco Zip Seal N'Peel Interior/Exterior Removable Sealant Vanilla", "url": "https://toxyscansoftware.net/fiche/440/440074_fr.pdf"}, {"name": "1413 uS/cm Conductivity Standard", "url": "https://toxyscansoftware.net/fiche/460/460436_fr.pdf"}, {"name": "16-510C Pitt-Glaze WB1 Pre-Catalyzed Water-Borne Acrylic Epoxy Interior Semi-Gloss-White/Pastel Base", "url": "https://toxyscansoftware.net/fiche/429/429743_fr.pdf"}, {"name": "165-502 Sico Doors & Trim Water-Based Interior Paint Pearl Finish Base 2", "url": "https://toxyscansoftware.net/fiche/365/365808_fr.pdf"}, {"name": "196110 Crystalex Interior Clear Satin Varnish for Floors", "url": "https://toxyscansoftware.net/fiche/305/305073_fr.pdf"}, {"name": "23010 Dulux X-Pert Waterborne Alkyd Primer Sealer White", "url": "https://toxyscansoftware.net/fiche/381/381316_fr.pdf"}, {"name": "239-403 Exterior Resurfacer Moderate", "url": "https://toxyscansoftware.net/fiche/394/394527_fr.pdf"}, {"name": "261-503 Sico Latex Floor Paint Interior/Exterior Satin Finish Base 3", "url": "https://toxyscansoftware.net/fiche/456/456204_fr.pdf"}, {"name": "3-In-One Multi-Purpose Oil- Huile Polyvalente 3 en 1", "url": "https://toxyscansoftware.net/fiche/324/324797_fr.pdf"}, {"name": "34A Valve Grinding Compound", "url": "https://toxyscansoftware.net/fiche/449/449341_fr.pdf"}, {"name": "364 Dove Grey 6U", "url": "https://toxyscansoftware.net/fiche/424/424085_fr.pdf"}, {"name": "3M Bondo All Purpose Fiberglass Resin, P.N. 20122, 20124", "url": "https://toxyscansoftware.net/fiche/388/388606_fr.pdf"}, {"name": "3M Bondo Fiberglass Resin Liquid Hardener, 20126, 31626", "url": "https://toxyscansoftware.net/fiche/304/304377_fr.pdf"}, {"name": "3M Chiffons Nettoyants et Desinfectants pour Surfaces", "url": "https://toxyscansoftware.net/fiche/326/326474_fr.pdf"}, {"name": "3M Neutral Cleaner Concentrate (Product No. 3, 3M Chemical Management Systems) (EN)", "url": "https://toxyscansoftware.net/fiche/418/418642_en.pdf"}, {"name": "545 Thread Sealant Pneumatic/Hydraulic Fittings", "url": "https://toxyscansoftware.net/fiche/378/378153_fr.pdf"}, {"name": "635110 Sico Corrostop Ultra Anti-Rust and Plastic Enamel Gloss Ultra White", "url": "https://toxyscansoftware.net/fiche/456/456371_fr.pdf"}, {"name": "635340 Sico Corrostop Ultra Anti-Rust and Plastic Enamel Ford Blue", "url": "https://toxyscansoftware.net/fiche/394/394413_fr.pdf"}, {"name": "635503 Sico Corrostop Ultra Anti-Rust And Plastic Enamel Neutral Base", "url": "https://toxyscansoftware.net/fiche/378/378070_fr.pdf"}, {"name": "745 Aerosol", "url": "https://toxyscansoftware.net/fiche/305/305030_fr.pdf"}, {"name": "769 Lubricant", "url": "https://toxyscansoftware.net/fiche/304/304677_fr.pdf"}, {"name": "830-130 Expert 0VOC Primer Sealer", "url": "https://toxyscansoftware.net/fiche/435/435895_fr.pdf"}, {"name": "835-600 Expert 0Voc Melamine Tintable White", "url": "https://toxyscansoftware.net/fiche/399/399738_fr.pdf"}, {"name": "851116 Ecosource Zero VOC Interior Acrylic Latex Flat For Ceiling White", "url": "https://toxyscansoftware.net/fiche/400/400570_fr.pdf"}, {"name": "853603 Sico Ecosource Zero VOC Interior Acrylic Latex Velvet Base 3", "url": "https://toxyscansoftware.net/fiche/313/313540_fr.pdf"}, {"name": "855-604NC Sico Ecosource 100% Acrylic Interior Latex Melamine Base 4", "url": "https://toxyscansoftware.net/fiche/430/430456_fr.pdf"}, {"name": "855600 Sico Ecosource Zero Voc Interior Acrylic Latex Melamine White", "url": "https://toxyscansoftware.net/fiche/435/435900_fr.pdf"}, {"name": "855602 Sico Ecosource Zero VOC Interior Acrylic Latex Melamine Base 2", "url": "https://toxyscansoftware.net/fiche/376/376526_fr.pdf"}, {"name": "855604 Sico Ecosource Zero VOC Interior Acrylic Latex Melamine Base 4", "url": "https://toxyscansoftware.net/fiche/321/321358_fr.pdf"}, {"name": "872611 Sico Expert Interior Latex Satin Self-Sealing Base 1", "url": "https://toxyscansoftware.net/fiche/319/319844_fr.pdf"}, {"name": "874604 Sico Expert Interior Acrylic Latex Platinum Base 4", "url": "https://toxyscansoftware.net/fiche/440/440216_fr.pdf"}, {"name": "875600 Sico Expert Interior Acrylic Latex Melamine White", "url": "https://toxyscansoftware.net/fiche/456/456034_fr.pdf"}, {"name": "875602 Sico Expert Interior Acrylic Latex Melamine Base 2", "url": "https://toxyscansoftware.net/fiche/303/303600_fr.pdf"}, {"name": "875603 Sico Expert Interior Acrylic Latex Melamine Base 3", "url": "https://toxyscansoftware.net/fiche/303/303568_fr.pdf"}, {"name": "875620 Sico Expert Interior Acrylic Latex Melamine Super White", "url": "https://toxyscansoftware.net/fiche/307/307682_fr.pdf"}, {"name": "922-190 Sico Expert Exterior Alkyd Anti-Rust for Metal Flat Black", "url": "https://toxyscansoftware.net/fiche/440/440208_fr.pdf"}, {"name": "922110 Sico Expert Exterior Alkyd Anti", "url": "https://toxyscansoftware.net/fiche/384/384750_fr.pdf"}, {"name": "922180 Sico Expert Exterior Alkyd Anti-Rust for Metal Gloss Black", "url": "https://toxyscansoftware.net/fiche/315/315075_fr.pdf"}, {"name": "922480 Sico Expert Exterior ALKYD Anti-Rust for Metal Gloss Green", "url": "https://toxyscansoftware.net/fiche/436/436117_fr.pdf"}, {"name": "922520 Sico Expert Exterior Alkyd Anti-Rust for Metal Gloss Safety Yellow", "url": "https://toxyscansoftware.net/fiche/422/422436_fr.pdf"}, {"name": "922585 Sico Expert Exterior Alkyd Anti-Rust For Metal Gloss Safety Orange", "url": "https://toxyscansoftware.net/fiche/400/400361_fr.pdf"}, {"name": "922603 Sico Expert Exterior Alykd Anti-Rust for Metal Gloss Base 3", "url": "https://toxyscansoftware.net/fiche/339/339310_fr.pdf"}, {"name": "922616 Sico Expert Exterior ALKYD ANTI-Rust for MetaL Gloss Grey", "url": "https://toxyscansoftware.net/fiche/436/436125_fr.pdf"}, {"name": "977601 Sico Expert Exterior Acrylic Latex Semi-Gloss Base 1", "url": "https://toxyscansoftware.net/fiche/440/440242_fr.pdf"}, {"name": "977602 Sico Expert Exterior Acrylic Latex Semi-Gloss Base 2", "url": "https://toxyscansoftware.net/fiche/429/429484_fr.pdf"}, {"name": "977603 Sico Expert Exterior Acrylic Latex Semi-Gloss Base 3", "url": "https://toxyscansoftware.net/fiche/429/429485_fr.pdf"}, {"name": "Acétone", "url": "https://toxyscansoftware.net/fiche/371/371217_fr.pdf"}, {"name": "Acétylène, Dissous", "url": "https://toxyscansoftware.net/fiche/324/324541_fr.pdf"}, {"name": "Acide muriatique 20 baume", "url": "https://toxyscansoftware.net/fiche/305/305101_fr.pdf"}, {"name": "Acide sulfurique 0,02 N", "url": "https://toxyscansoftware.net/fiche/371/371968_fr.pdf"}, {"name": "Acrovyn 4000 MW", "url": "https://toxyscansoftware.net/fiche/433/433520_fr.pdf"}, {"name": "Adhésif de contact 3M 30-NF Fastbond Vert", "url": "https://toxyscansoftware.net/fiche/328/328537_fr.pdf"}, {"name": "Adhésif Mastic à Prise Rapide pour Bateaux 5200 3M Blanc, NP 06520, 05220, 06534, 06535", "url": "https://toxyscansoftware.net/fiche/315/315321_fr.pdf"}, {"name": "Adhésif Structural 3M, Composant A (face uréthane), NP 08101", "url": "https://toxyscansoftware.net/fiche/304/304665_fr.pdf"}, {"name": "Aervoe Steel Renew", "url": "https://toxyscansoftware.net/fiche/436/436717_fr.pdf"}, {"name": "Alcool à Friction 70%", "url": "https://toxyscansoftware.net/fiche/302/302046_fr.pdf"}, {"name": "Alex Plus Clear", "url": "https://toxyscansoftware.net/fiche/383/383894_fr.pdf"}, {"name": "All-Crete - Fortifiant Acrylique pour Béton", "url": "https://toxyscansoftware.net/fiche/371/371589_fr.pdf"}, {"name": "Amande", "url": "https://toxyscansoftware.net/fiche/326/326041_fr.pdf"}, {"name": "Anti-projections Linde Tip Guard", "url": "https://toxyscansoftware.net/fiche/330/330774_fr.pdf"}, {"name": "Antigel de Plomberie Éthanol", "url": "https://toxyscansoftware.net/fiche/428/428656_fr.pdf"}, {"name": "Apprêt Extérieur Resisto", "url": "https://toxyscansoftware.net/fiche/440/440342_fr.pdf"}, {"name": "Aquarise Apprêt Clair pour Tuyaux de Plastique en CPVC", "url": "https://toxyscansoftware.net/fiche/463/463575_fr.pdf"}, {"name": "Aquarise Colle Jaune à solvant en 1 étape à faible COV pour tuyaux en CPVC", "url": "https://toxyscansoftware.net/fiche/463/463609_fr.pdf"}, {"name": "Argon, Comprimé", "url": "https://toxyscansoftware.net/fiche/394/394528_fr.pdf"}, {"name": "Arjo Wipe Away", "url": "https://toxyscansoftware.net/fiche/304/304991_fr.pdf"}, {"name": "ATF Dex Merc", "url": "https://toxyscansoftware.net/fiche/462/462069_fr.pdf"}, {"name": "Atlas Premium 4-Cycle Engine Oil SAE 5W-30 (EN)", "url": "https://toxyscansoftware.net/fiche/434/434748_en.pdf"}, {"name": "Aura Waterborne Interior Eggshell Finish Base 1", "url": "https://toxyscansoftware.net/fiche/322/322499_fr.pdf"}, {"name": "Azote, Comprimé", "url": "https://toxyscansoftware.net/fiche/330/330482_fr.pdf"}, {"name": "Bar-Rust 235 235PC Part B", "url": "https://toxyscansoftware.net/fiche/331/331703_fr.pdf"}, {"name": "Bar-Rust 235 Base White Tint Part A", "url": "https://toxyscansoftware.net/fiche/473/473982_fr.pdf"}, {"name": "Benjamin Moore Corotech Command Waterborne Acrylic Urethane Base 1", "url": "https://toxyscansoftware.net/fiche/436/436081_fr.pdf"}, {"name": "Betaseal Express+ Urethane Adhesive", "url": "https://toxyscansoftware.net/fiche/422/422517_fr.pdf"}, {"name": "Blanc Lustré", "url": "https://toxyscansoftware.net/fiche/443/443871_fr.pdf"}, {"name": "Bleu Moyen", "url": "https://toxyscansoftware.net/fiche/371/371741_fr.pdf"}, {"name": "Blue Thunder", "url": "https://toxyscansoftware.net/fiche/382/382016_fr.pdf"}, {"name": "Bowlet", "url": "https://toxyscansoftware.net/fiche/301/301212_fr.pdf"}, {"name": "Bright Dyes FLT Yellow/Green Tablet", "url": "https://toxyscansoftware.net/fiche/381/381664_fr.pdf"}, {"name": "Brun", "url": "https://toxyscansoftware.net/fiche/460/460360_fr.pdf"}, {"name": "BT 440S", "url": "https://toxyscansoftware.net/fiche/436/436401_fr.pdf"}, {"name": "BT-13A", "url": "https://toxyscansoftware.net/fiche/322/322987_fr.pdf"}, {"name": "Calflo AF", "url": "https://toxyscansoftware.net/fiche/343/343360_fr.pdf"}, {"name": "Canadian ABS to PVC White Transition Cement", "url": "https://toxyscansoftware.net/fiche/371/371312_fr.pdf"}, {"name": "Cat Deo 10W-30 (Diesel Engine Oil)", "url": "https://toxyscansoftware.net/fiche/421/421647_fr.pdf"}, {"name": "CAT NGEC - Natural Gas Engine Coolant", "url": "https://toxyscansoftware.net/fiche/345/345643_fr.pdf"}, {"name": "CB 6 (Aerosol)", "url": "https://toxyscansoftware.net/fiche/323/323979_fr.pdf"}, {"name": "CD-1000 Aérosol", "url": "https://toxyscansoftware.net/fiche/392/392010_fr.pdf"}, {"name": "CH900 Contact Cleaner", "url": "https://toxyscansoftware.net/fiche/304/304666_fr.pdf"}, {"name": "Chemsol, Diluant à usage industriel", "url": "https://toxyscansoftware.net/fiche/314/314468_fr.pdf"}, {"name": "Chlorure De Méthylène", "url": "https://toxyscansoftware.net/fiche/384/384094_fr.pdf"}, {"name": "Clean and Etching solution", "url": "https://toxyscansoftware.net/fiche/324/324760_fr.pdf"}, {"name": "Cleaner-Lubricant", "url": "https://toxyscansoftware.net/fiche/307/307086_fr.pdf"}, {"name": "CLR - Bath and Kitchen Cleaner", "url": "https://toxyscansoftware.net/fiche/460/460415_fr.pdf"}, {"name": "CLR Calcium, Lime and Rust Remover", "url": "https://toxyscansoftware.net/fiche/477/477486_fr.pdf"}, {"name": "Colorant L Magenta Red 837790", "url": "https://toxyscansoftware.net/fiche/305/305088_fr.pdf"}, {"name": "Colorant Q Black Oxide 837610", "url": "https://toxyscansoftware.net/fiche/430/430706_fr.pdf"}, {"name": "Colorant S Red Oxide 837770", "url": "https://toxyscansoftware.net/fiche/305/305087_fr.pdf"}, {"name": "Colorant V Titanium WH 837100", "url": "https://toxyscansoftware.net/fiche/305/305081_fr.pdf"}, {"name": "Colorant X Brown Oxide 837940", "url": "https://toxyscansoftware.net/fiche/305/305090_fr.pdf"}, {"name": "Colorant Y Yellow Ochre 837930", "url": "https://toxyscansoftware.net/fiche/430/430708_fr.pdf"}, {"name": "CommCool HD", "url": "https://toxyscansoftware.net/fiche/367/367327_fr.pdf"}, {"name": "Coolcut Solid", "url": "https://toxyscansoftware.net/fiche/343/343463_fr.pdf"}, {"name": "Copeland 998-AB52-11", "url": "https://toxyscansoftware.net/fiche/370/370057_fr.pdf"}, {"name": "Crete", "url": "https://toxyscansoftware.net/fiche/378/378730_fr.pdf"}, {"name": "CS-1000", "url": "https://toxyscansoftware.net/fiche/412/412547_fr.pdf"}, {"name": "Dap kitchen and Bath Mildew Resistant Silicone Sealant Clear", "url": "https://toxyscansoftware.net/fiche/307/307147_fr.pdf"}, {"name": "Dehydrol", "url": "https://toxyscansoftware.net/fiche/305/305031_fr.pdf"}, {"name": "Devcon Titanium Putty Resin", "url": "https://toxyscansoftware.net/fiche/321/321389_fr.pdf"}, {"name": "DEvthane 359H Base White Tint Part A", "url": "https://toxyscansoftware.net/fiche/436/436619_fr.pdf"}, {"name": "Devthane 379/359H Part B", "url": "https://toxyscansoftware.net/fiche/436/436620_fr.pdf"}, {"name": "DG-66", "url": "https://toxyscansoftware.net/fiche/305/305033_fr.pdf"}, {"name": "Diesel/Bio-diesel/Distillate", "url": "https://toxyscansoftware.net/fiche/456/456710_fr.pdf"}, {"name": "Diluant à Peinture (Recochem)", "url": "https://toxyscansoftware.net/fiche/324/324813_fr.pdf"}, {"name": "Diluant Polyprep 875-104", "url": "https://toxyscansoftware.net/fiche/335/335117_fr.pdf"}, {"name": "Diluant/Nettoyant pour Colle Contact", "url": "https://toxyscansoftware.net/fiche/371/371320_fr.pdf"}, {"name": "Dioxyde de carbone", "url": "https://toxyscansoftware.net/fiche/448/448099_fr.pdf"}, {"name": "Dioxyde de Carbone (2-15%), Oxygène (2-4%) en Argon", "url": "https://toxyscansoftware.net/fiche/454/454685_fr.pdf"}, {"name": "Dowsil 786 Silicone Sealant-M White", "url": "https://toxyscansoftware.net/fiche/378/378080_fr.pdf"}, {"name": "Drummond Open and Shut-Nut and Bolt Loosener and Rust Penetrant", "url": "https://toxyscansoftware.net/fiche/443/443185_fr.pdf"}, {"name": "Duster ou Duster L ou Duster R ou Power Duster ( 134a)", "url": "https://toxyscansoftware.net/fiche/392/392715_fr.pdf"}, {"name": "Dymonic 100 Blanc 30 CTG", "url": "https://toxyscansoftware.net/fiche/435/435978_fr.pdf"}, {"name": "Dynaflex 230 - All Colors", "url": "https://toxyscansoftware.net/fiche/332/332567_fr.pdf"}, {"name": "Dynamic Japan dryer", "url": "https://toxyscansoftware.net/fiche/312/312914_fr.pdf"}, {"name": "Eco Spec WB Interior Latex Pearl Finish Base 2", "url": "https://toxyscansoftware.net/fiche/334/334665_fr.pdf"}, {"name": "Eco Spec WB Interior Latex Pearl Finish Base 3", "url": "https://toxyscansoftware.net/fiche/384/384324_fr.pdf"}, {"name": "Eco Spec WB Interior Latex Pearl Finish White", "url": "https://toxyscansoftware.net/fiche/334/334552_fr.pdf"}, {"name": "ES75C - H/D Degreaser", "url": "https://toxyscansoftware.net/fiche/315/315415_fr.pdf"}, {"name": "Everlife 100% Acrylic High Gloss Waterborne Enamel", "url": "https://toxyscansoftware.net/fiche/436/436138_fr.pdf"}, {"name": "F-200-AA / F-200R-A", "url": "https://toxyscansoftware.net/fiche/436/436241_fr.pdf"}, {"name": "Filduc 1879", "url": "https://toxyscansoftware.net/fiche/371/371905_fr.pdf"}, {"name": "FINE 121 PMUC", "url": "https://toxyscansoftware.net/fiche/428/428773_fr.pdf"}, {"name": "Forane 404A", "url": "https://toxyscansoftware.net/fiche/313/313530_fr.pdf"}, {"name": "Free", "url": "https://toxyscansoftware.net/fiche/394/394718_fr.pdf"}, {"name": "Freeze", "url": "https://toxyscansoftware.net/fiche/300/300676_fr.pdf"}, {"name": "FSH Welding ECOPASSIV", "url": "https://toxyscansoftware.net/fiche/425/425335_fr.pdf"}, {"name": "G-Max 302", "url": "https://toxyscansoftware.net/fiche/436/436711_fr.pdf"}, {"name": "G1201A Red Insulation Enamel-Aerosol", "url": "https://toxyscansoftware.net/fiche/443/443439_fr.pdf"}, {"name": "Garnitures de Joints", "url": "https://toxyscansoftware.net/fiche/364/364236_fr.pdf"}, {"name": "Gas Leak Detector (4180-53, 4832-C9)", "url": "https://toxyscansoftware.net/fiche/301/301416_fr.pdf"}, {"name": "Gas Leak Locator", "url": "https://toxyscansoftware.net/fiche/303/303754_fr.pdf"}, {"name": "Gasket Black Silicone Gasket Maker", "url": "https://toxyscansoftware.net/fiche/321/321641_fr.pdf"}, {"name": "Generation 5 Plus Concentré", "url": "https://toxyscansoftware.net/fiche/408/408682_fr.pdf"}, {"name": "Genetron 502", "url": "https://toxyscansoftware.net/fiche/305/305651_fr.pdf"}, {"name": "Germinix-16", "url": "https://toxyscansoftware.net/fiche/456/456525_fr.pdf"}, {"name": "Glassex Pro", "url": "https://toxyscansoftware.net/fiche/302/302172_fr.pdf"}, {"name": "Gold Rush", "url": "https://toxyscansoftware.net/fiche/318/318122_fr.pdf"}, {"name": "Graisse de Lithium Blanche", "url": "https://toxyscansoftware.net/fiche/456/456733_fr.pdf"}, {"name": "Graphite Plus", "url": "https://toxyscansoftware.net/fiche/343/343818_fr.pdf"}, {"name": "Graphite Sec", "url": "https://toxyscansoftware.net/fiche/426/426642_fr.pdf"}, {"name": "Great Stuff Gaps & Crack Insulating Foam Sealant", "url": "https://toxyscansoftware.net/fiche/307/307672_fr.pdf"}, {"name": "Gris", "url": "https://toxyscansoftware.net/fiche/383/383513_fr.pdf"}, {"name": "GS-1000 Aérosol", "url": "https://toxyscansoftware.net/fiche/457/457016_fr.pdf"}, {"name": "Hex-On Fresh Linen Odor Antagonist", "url": "https://toxyscansoftware.net/fiche/307/307275_fr.pdf"}, {"name": "Honda HST Fluid", "url": "https://toxyscansoftware.net/fiche/384/384499_fr.pdf"}, {"name": "Huiles Hydrauliques LT Anti-Usure Performance Plus (ISO 22, 32, 46)", "url": "https://toxyscansoftware.net/fiche/399/399780_fr.pdf"}, {"name": "Hy-Zinc Aerosol", "url": "https://toxyscansoftware.net/fiche/380/380252_fr.pdf"}, {"name": "Hydraulique Contracteur", "url": "https://toxyscansoftware.net/fiche/376/376661_fr.pdf"}, {"name": "Indhp 1-Gl 2pk Rocthn 9800 Gls Mstn Base", "url": "https://toxyscansoftware.net/fiche/380/380144_fr.pdf"}, {"name": "Indicateur Calcium-Magnésium", "url": "https://toxyscansoftware.net/fiche/353/353680_fr.pdf"}, {"name": "Indicateur d'Alkalinité Totale", "url": "https://toxyscansoftware.net/fiche/371/371774_fr.pdf"}, {"name": "Indicateur Dureté", "url": "https://toxyscansoftware.net/fiche/346/346664_fr.pdf"}, {"name": "INDP 1-QT ROCTHN 9800 ACT", "url": "https://toxyscansoftware.net/fiche/331/331622_fr.pdf"}, {"name": "Invisilube", "url": "https://toxyscansoftware.net/fiche/381/381092_fr.pdf"}, {"name": "Iodure-Iodate de Potassium 1ML=.5mg SO3", "url": "https://toxyscansoftware.net/fiche/309/309956_fr.pdf"}, {"name": "Irwin Chalk - Crimson Red, Permanent Staining", "url": "https://toxyscansoftware.net/fiche/393/393603_fr.pdf"}, {"name": "Klebfix", "url": "https://toxyscansoftware.net/fiche/409/409672_fr.pdf"}, {"name": "Krylon Metallics Dull Aluminum", "url": "https://toxyscansoftware.net/fiche/436/436266_fr.pdf"}, {"name": "Krylon Rust Tough (aerosol) Gloss Clear", "url": "https://toxyscansoftware.net/fiche/436/436278_fr.pdf"}, {"name": "Krylon Rust Tough Enamel (aerosol) Almond", "url": "https://toxyscansoftware.net/fiche/304/304443_fr.pdf"}, {"name": "Krylon Rust Tough Enamel (aerosol) Almond", "url": "https://toxyscansoftware.net/fiche/305/305985_fr.pdf"}, {"name": "Krylon Rust Tough Enamel (Aerosol) Battleship Gray", "url": "https://toxyscansoftware.net/fiche/449/449454_fr.pdf"}, {"name": "Krylon Rust Tough Enamel (Aerosol) Gloss Black", "url": "https://toxyscansoftware.net/fiche/456/456042_fr.pdf"}, {"name": "Krylon Rust Tough Enamel (aerosol) Radiant Red", "url": "https://toxyscansoftware.net/fiche/304/304444_fr.pdf"}, {"name": "Krylon Rust Tough Enamel Gold Metallic", "url": "https://toxyscansoftware.net/fiche/371/371681_fr.pdf"}, {"name": "Kubota UDT Universal Trans Liquide Hydraulique", "url": "https://toxyscansoftware.net/fiche/383/383207_fr.pdf"}, {"name": "Kwik Seal Tub & Tile Adhesive Caulk - All Colors", "url": "https://toxyscansoftware.net/fiche/438/438060_fr.pdf"}, {"name": "Lavo Pro 6 Javel DIN02358107 & CFIA. NSF MUL186mg/L.", "url": "https://toxyscansoftware.net/fiche/324/324716_fr.pdf"}, {"name": "Lectrasolv, MM", "url": "https://toxyscansoftware.net/fiche/363/363255_fr.pdf"}, {"name": "LePage Carpenter's Glue", "url": "https://toxyscansoftware.net/fiche/332/332653_fr.pdf"}, {"name": "Lepage Epoxy 5 min (durcisseur)", "url": "https://toxyscansoftware.net/fiche/303/303850_fr.pdf"}, {"name": "LePage Heavy Duty Contact Cement", "url": "https://toxyscansoftware.net/fiche/310/310334_fr.pdf"}, {"name": "LePage Marine Epoxy 25ml Resin", "url": "https://toxyscansoftware.net/fiche/301/301296_fr.pdf"}, {"name": "LePage PL200 Construction Adhesive", "url": "https://toxyscansoftware.net/fiche/457/457751_fr.pdf"}, {"name": "LePage Plastic Wood Filler", "url": "https://toxyscansoftware.net/fiche/457/457113_fr.pdf"}, {"name": "LePage Plastic Wood Wood Filler", "url": "https://toxyscansoftware.net/fiche/401/401723_fr.pdf"}, {"name": "LePage White Glue", "url": "https://toxyscansoftware.net/fiche/364/364200_fr.pdf"}, {"name": "LFB Low Fuming Bronze (Bare & Coated)", "url": "https://toxyscansoftware.net/fiche/428/428566_fr.pdf"}, {"name": "Liquid Drain", "url": "https://toxyscansoftware.net/fiche/435/435482_fr.pdf"}, {"name": "Loctite 242", "url": "https://toxyscansoftware.net/fiche/302/302271_fr.pdf"}, {"name": "Loctite 5113 Thread Sealant known as Thread Sealant with PTFE", "url": "https://toxyscansoftware.net/fiche/444/444202_fr.pdf"}, {"name": "Loctite EA 3463 known as Loctite FM Metal Magic 4oz", "url": "https://toxyscansoftware.net/fiche/370/370915_fr.pdf"}, {"name": "Loctite LB 8070 know as Loctite HD AntiSeize 20g stk E", "url": "https://toxyscansoftware.net/fiche/374/374416_fr.pdf"}, {"name": "Loctite LB 8150 SV A/S known as Silver Grade Anti-Seize Lubric", "url": "https://toxyscansoftware.net/fiche/372/372466_fr.pdf"}, {"name": "Loctite SF 7649", "url": "https://toxyscansoftware.net/fiche/321/321711_fr.pdf"}, {"name": "Loctite SI 596 RD know as Loctite Superflex Red RTV 80ml", "url": "https://toxyscansoftware.net/fiche/381/381216_fr.pdf"}, {"name": "Lok-Cease Aerosol", "url": "https://toxyscansoftware.net/fiche/318/318162_fr.pdf"}, {"name": "Low fuming bronze (Baguette de brassage Super Bronze)", "url": "https://toxyscansoftware.net/fiche/314/314394_fr.pdf"}, {"name": "LPS 1 (Aerosol)", "url": "https://toxyscansoftware.net/fiche/441/441617_fr.pdf"}, {"name": "LPS DETEX Food Grade Chain Lubricant", "url": "https://toxyscansoftware.net/fiche/342/342773_fr.pdf"}, {"name": "LPS Detex Food Grade Silicone", "url": "https://toxyscansoftware.net/fiche/373/373438_fr.pdf"}, {"name": "Lubrifiant a la Silicone - 300g", "url": "https://toxyscansoftware.net/fiche/457/457112_fr.pdf"}, {"name": "Lubrifiant Victaulic", "url": "https://toxyscansoftware.net/fiche/329/329978_fr.pdf"}, {"name": "LynCar Proseal Plus", "url": "https://toxyscansoftware.net/fiche/393/393243_fr.pdf"}, {"name": "Magcare 107", "url": "https://toxyscansoftware.net/fiche/358/358286_fr.pdf"}, {"name": "Magique liquide", "url": "https://toxyscansoftware.net/fiche/327/327244_fr.pdf"}, {"name": "Magtrace B-01", "url": "https://toxyscansoftware.net/fiche/375/375332_fr.pdf"}, {"name": "MAP-Pro Premium Hand Torch Fuel", "url": "https://toxyscansoftware.net/fiche/321/321392_fr.pdf"}, {"name": "Mascou-Tap", "url": "https://toxyscansoftware.net/fiche/419/419363_fr.pdf"}, {"name": "Masters Metallic Compound", "url": "https://toxyscansoftware.net/fiche/324/324099_fr.pdf"}, {"name": "Masters Pro-Blue Pipe Thread Sealant", "url": "https://toxyscansoftware.net/fiche/460/460960_fr.pdf"}, {"name": "Masters Pro-Dope", "url": "https://toxyscansoftware.net/fiche/324/324098_fr.pdf"}, {"name": "Matériau d'Étanchéité Coupe-Feu 1000 NS et 1003 SL 3M", "url": "https://toxyscansoftware.net/fiche/315/315028_fr.pdf"}, {"name": "Mazout Léger #2 /Huile à Chauffage", "url": "https://toxyscansoftware.net/fiche/303/303878_fr.pdf"}, {"name": "Medium Clear CPVC Cement", "url": "https://toxyscansoftware.net/fiche/381/381674_fr.pdf"}, {"name": "Messer Gouging Carbon DCCC Jointed, Messer Gouging Carbon Pointé. (Électrodes de gougeage au carbone)", "url": "https://toxyscansoftware.net/fiche/355/355576_fr.pdf"}, {"name": "MF015 Partie A", "url": "https://toxyscansoftware.net/fiche/436/436546_fr.pdf"}, {"name": "MF015 Partie B", "url": "https://toxyscansoftware.net/fiche/436/436547_fr.pdf"}, {"name": "Mineralube 10W", "url": "https://toxyscansoftware.net/fiche/308/308082_fr.pdf"}, {"name": "Mineralube 20W-20", "url": "https://toxyscansoftware.net/fiche/365/365617_fr.pdf"}, {"name": "Mobil Rarus 427", "url": "https://toxyscansoftware.net/fiche/415/415252_fr.pdf"}, {"name": "Mobilube HD Plus 80W-90", "url": "https://toxyscansoftware.net/fiche/442/442405_fr.pdf"}, {"name": "Molybdène 2 Réactif pour Basse Gamme Molybdate", "url": "https://toxyscansoftware.net/fiche/318/318560_fr.pdf"}, {"name": "Nashua 357 Spray Adhesive", "url": "https://toxyscansoftware.net/fiche/370/370236_fr.pdf"}, {"name": "Nettoyant à pinceaux et rouleaux", "url": "https://toxyscansoftware.net/fiche/312/312497_fr.pdf"}, {"name": "Nettoyant pour Vitre/Glass Cleaner", "url": "https://toxyscansoftware.net/fiche/304/304414_fr.pdf"}, {"name": "Nettoyeur à Freins et Contacts Électriques", "url": "https://toxyscansoftware.net/fiche/382/382455_fr.pdf"}, {"name": "Nettoyeur à Mains Ecologique avec Pierre Ponce", "url": "https://toxyscansoftware.net/fiche/457/457041_fr.pdf"}, {"name": "Nettoyeurs a Freins", "url": "https://toxyscansoftware.net/fiche/443/443109_fr.pdf"}, {"name": "Never-Seez Regular Grade", "url": "https://toxyscansoftware.net/fiche/324/324597_fr.pdf"}, {"name": "Never-Seez Wht Food Grd w/PTFE", "url": "https://toxyscansoftware.net/fiche/446/446011_fr.pdf"}, {"name": "Nivabond", "url": "https://toxyscansoftware.net/fiche/467/467665_fr.pdf"}, {"name": "Noir Lustré", "url": "https://toxyscansoftware.net/fiche/423/423179_fr.pdf"}, {"name": "Non-Flammable Rubber Cement", "url": "https://toxyscansoftware.net/fiche/411/411551_fr.pdf"}, {"name": "Nu Tile", "url": "https://toxyscansoftware.net/fiche/314/314256_fr.pdf"}, {"name": "Nu-Brite Ultra Concentrate Coil Cleaner (4291-92)", "url": "https://toxyscansoftware.net/fiche/314/314948_fr.pdf"}, {"name": "O.M.R T85", "url": "https://toxyscansoftware.net/fiche/305/305884_fr.pdf"}, {"name": "O.M.R. A177", "url": "https://toxyscansoftware.net/fiche/305/305882_fr.pdf"}, {"name": "Oatey Clear Primer-NSF Listed for CPVC and PVC", "url": "https://toxyscansoftware.net/fiche/372/372592_fr.pdf"}, {"name": "Oatey H2O 5 Paste Flux", "url": "https://toxyscansoftware.net/fiche/439/439744_fr.pdf"}, {"name": "Oatey PVC Heavy Duty Clear or Gray Cement", "url": "https://toxyscansoftware.net/fiche/380/380375_fr.pdf"}, {"name": "OMR SIL50R", "url": "https://toxyscansoftware.net/fiche/305/305929_fr.pdf"}, {"name": "One Earth Calcium Lime & Rust Remover", "url": "https://toxyscansoftware.net/fiche/436/436207_fr.pdf"}, {"name": "Oraten - Aerosol", "url": "https://toxyscansoftware.net/fiche/309/309752_fr.pdf"}, {"name": "Original Rapid Tap", "url": "https://toxyscansoftware.net/fiche/439/439728_fr.pdf"}, {"name": "Oxivir Tb Virucide, Bactericide, Tuberculocide, Fungicide, Sanitizer", "url": "https://toxyscansoftware.net/fiche/316/316520_fr.pdf"}, {"name": "Oxygène", "url": "https://toxyscansoftware.net/fiche/300/300887_fr.pdf"}, {"name": "Oxygène Comprimé", "url": "https://toxyscansoftware.net/fiche/399/399282_fr.pdf"}, {"name": "Painter's Touch 2X +6X340G GLS Hunter Green", "url": "https://toxyscansoftware.net/fiche/401/401005_fr.pdf"}, {"name": "Pastilles System Saver II, Clean and Protect Pastilles de Sel Adoucisseur d'Eau", "url": "https://toxyscansoftware.net/fiche/332/332248_fr.pdf"}, {"name": "Pate Tip-Guard Linde", "url": "https://toxyscansoftware.net/fiche/435/435799_fr.pdf"}, {"name": "PC4 AF", "url": "https://toxyscansoftware.net/fiche/435/435555_fr.pdf"}, {"name": "Peinture antirouille Fédécor (Brun)", "url": "https://toxyscansoftware.net/fiche/316/316475_fr.pdf"}, {"name": "Peinture Sico 261-110", "url": "https://toxyscansoftware.net/fiche/302/302076_fr.pdf"}, {"name": "Peinture Sico Expert 926-490", "url": "https://toxyscansoftware.net/fiche/308/308818_fr.pdf"}, {"name": "PF 560 Gravlguard caoutchoute texture europenne Noir", "url": "https://toxyscansoftware.net/fiche/456/456869_fr.pdf"}, {"name": "PH GN4 5W-30 SJ, 12 x 1 Quart Case", "url": "https://toxyscansoftware.net/fiche/380/380020_fr.pdf"}, {"name": "Piles Boutons au Lithium-Dioxyde de Manganèse", "url": "https://toxyscansoftware.net/fiche/411/411742_fr.pdf"}, {"name": "PL-100 Aérosol", "url": "https://toxyscansoftware.net/fiche/371/371316_fr.pdf"}, {"name": "PL-100 Liquide", "url": "https://toxyscansoftware.net/fiche/301/301233_fr.pdf"}, {"name": "Plaster of Paris", "url": "https://toxyscansoftware.net/fiche/313/313603_fr.pdf"}, {"name": "Plus Huile Moteur 30", "url": "https://toxyscansoftware.net/fiche/304/304400_fr.pdf"}, {"name": "Presto enleveur de graffiti", "url": "https://toxyscansoftware.net/fiche/355/355941_fr.pdf"}, {"name": "Propane", "url": "https://toxyscansoftware.net/fiche/450/450574_fr.pdf"}, {"name": "Propane (Bernz-o-Matic)", "url": "https://toxyscansoftware.net/fiche/322/322778_fr.pdf"}, {"name": "Protecteur cutané non irritant avec applicateur en mousse cavillon 3M 3343, 3344,3345,3343E,3345E, 3343P et 3345P", "url": "https://toxyscansoftware.net/fiche/323/323701_fr.pdf"}, {"name": "PVC Medium Clear Cement", "url": "https://toxyscansoftware.net/fiche/409/409546_fr.pdf"}, {"name": "PX Valve Grind Compound", "url": "https://toxyscansoftware.net/fiche/393/393566_fr.pdf"}, {"name": "Quick Plug Hydraulic Cement", "url": "https://toxyscansoftware.net/fiche/435/435508_fr.pdf"}, {"name": "R-414B (Hot Shot)", "url": "https://toxyscansoftware.net/fiche/326/326364_fr.pdf"}, {"name": "R1001", "url": "https://toxyscansoftware.net/fiche/436/436402_fr.pdf"}, {"name": "R150", "url": "https://toxyscansoftware.net/fiche/322/322993_fr.pdf"}, {"name": "R305", "url": "https://toxyscansoftware.net/fiche/301/301970_fr.pdf"}, {"name": "R320", "url": "https://toxyscansoftware.net/fiche/301/301971_fr.pdf"}, {"name": "R435", "url": "https://toxyscansoftware.net/fiche/301/301974_fr.pdf"}, {"name": "R590", "url": "https://toxyscansoftware.net/fiche/329/329518_fr.pdf"}, {"name": "R592", "url": "https://toxyscansoftware.net/fiche/313/313888_fr.pdf"}, {"name": "R594", "url": "https://toxyscansoftware.net/fiche/318/318087_fr.pdf"}, {"name": "Réactif de molybdène 1", "url": "https://toxyscansoftware.net/fiche/341/341188_fr.pdf"}, {"name": "Reduce 4", "url": "https://toxyscansoftware.net/fiche/311/311297_fr.pdf"}, {"name": "Refrigerant 134a", "url": "https://toxyscansoftware.net/fiche/436/436217_fr.pdf"}, {"name": "Refrigerant R-22", "url": "https://toxyscansoftware.net/fiche/436/436216_fr.pdf"}, {"name": "Réfrigérant R507", "url": "https://toxyscansoftware.net/fiche/420/420727_fr.pdf"}, {"name": "Regular Anti-Seize", "url": "https://toxyscansoftware.net/fiche/333/333747_fr.pdf"}, {"name": "RIDGID Nu-Clear Thread Cutting Oil (Canada)", "url": "https://toxyscansoftware.net/fiche/335/335018_fr.pdf"}, {"name": "Rona Minimal Expanding Foam Sealant 12oz HC STW 12ct", "url": "https://toxyscansoftware.net/fiche/362/362045_fr.pdf"}, {"name": "RPL Dry (L-123F)", "url": "https://toxyscansoftware.net/fiche/312/312249_fr.pdf"}, {"name": "Rust Tough Rust Preventive Enamel (aerosol), Navy", "url": "https://toxyscansoftware.net/fiche/305/305992_fr.pdf"}, {"name": "S SG Clro Epoxyshield Concrete patch Part A ACT (Kit N266003)", "url": "https://toxyscansoftware.net/fiche/400/400545_fr.pdf"}, {"name": "S SG Gry4 EpoxyShield Concrete Patch Part B Base (Kit N266003)", "url": "https://toxyscansoftware.net/fiche/405/405485_fr.pdf"}, {"name": "Sav-it aerosol", "url": "https://toxyscansoftware.net/fiche/305/305128_fr.pdf"}, {"name": "Scoot", "url": "https://toxyscansoftware.net/fiche/305/305969_fr.pdf"}, {"name": "SDI New", "url": "https://toxyscansoftware.net/fiche/380/380492_fr.pdf"}, {"name": "Serviettes Nettoyantes Désinfectantes au Peroxyde d'Hydrogène Clorox Healthcare", "url": "https://toxyscansoftware.net/fiche/383/383301_fr.pdf"}, {"name": "Sico EcoSource Zero VOC Interior Acrylic Latex Melamine Base 3 855603", "url": "https://toxyscansoftware.net/fiche/313/313853_fr.pdf"}, {"name": "SIE 1-GL S60 Epoxy WB Activator", "url": "https://toxyscansoftware.net/fiche/346/346254_fr.pdf"}, {"name": "SIE 1-GL S60 Epoxy WB GLS WHT Pastel BAS", "url": "https://toxyscansoftware.net/fiche/331/331624_fr.pdf"}, {"name": "SIE S38 1-GL Beyond SATN WHT Pastel Base", "url": "https://toxyscansoftware.net/fiche/383/383970_fr.pdf"}, {"name": "SIE S40 1-GL Epoxy Gloss Safety Yellow", "url": "https://toxyscansoftware.net/fiche/436/436102_fr.pdf"}, {"name": "Sierra Performance Activator", "url": "https://toxyscansoftware.net/fiche/408/408584_fr.pdf"}, {"name": "Sierre Performance Epoxy Medium Satin Coating Classic", "url": "https://toxyscansoftware.net/fiche/408/408601_fr.pdf"}, {"name": "Sika AnchorFix-3001 Comp. A", "url": "https://toxyscansoftware.net/fiche/441/441447_fr.pdf"}, {"name": "Sika AnchorFix-3001 Comp. B", "url": "https://toxyscansoftware.net/fiche/441/441450_fr.pdf"}, {"name": "Simfrost 50%", "url": "https://toxyscansoftware.net/fiche/464/464344_fr.pdf"}, {"name": "Snake Oil - Ready to Use", "url": "https://toxyscansoftware.net/fiche/330/330766_fr.pdf"}, {"name": "Sodel 308-16, 308H-16, 308L-16", "url": "https://toxyscansoftware.net/fiche/300/300056_fr.pdf"}, {"name": "Sodel 309-16, 309H-16, 309L-16, 309Cb-16", "url": "https://toxyscansoftware.net/fiche/310/310723_fr.pdf"}, {"name": "Solid Strike 110 MSS et Solid Strike 115 MSS", "url": "https://toxyscansoftware.net/fiche/456/456638_fr.pdf"}, {"name": "Solid Strike Electrode E7018-1H4R", "url": "https://toxyscansoftware.net/fiche/457/457134_fr.pdf"}, {"name": "SolidARC 110 SSM (Fils de soudage MIG acier inoxydable) SolidARC 110 SST (baguettes de soudage TIG acier inoxydable) ou baguettes et électrodes de soudage à base d%u2019acier inoxydable", "url": "https://toxyscansoftware.net/fiche/422/422960_fr.pdf"}, {"name": "SolidStrike", "url": "https://toxyscansoftware.net/fiche/426/426685_fr.pdf"}, {"name": "Solo Smoke Detector Tester", "url": "https://toxyscansoftware.net/fiche/436/436328_fr.pdf"}, {"name": "Solus AP24", "url": "https://toxyscansoftware.net/fiche/445/445420_fr.pdf"}, {"name": "Solution Molybdène TC2 pour échantillon 10ml", "url": "https://toxyscansoftware.net/fiche/439/439654_fr.pdf"}, {"name": "Solution Standard pH 7.0", "url": "https://toxyscansoftware.net/fiche/371/371963_fr.pdf"}, {"name": "Solution Titrante de Faible Dureté", "url": "https://toxyscansoftware.net/fiche/371/371967_fr.pdf"}, {"name": "Solvable PTS en Poudre", "url": "https://toxyscansoftware.net/fiche/381/381658_fr.pdf"}, {"name": "Solvo-plast II", "url": "https://toxyscansoftware.net/fiche/395/395309_fr.pdf"}, {"name": "Soudotec NI 99 BF", "url": "https://toxyscansoftware.net/fiche/436/436876_fr.pdf"}, {"name": "Soudotec Pâte Neutra", "url": "https://toxyscansoftware.net/fiche/436/436874_fr.pdf"}, {"name": "Soudotec Pâte Pick LF", "url": "https://toxyscansoftware.net/fiche/436/436875_fr.pdf"}, {"name": "SP 603 Blue Layout Dye Aerosol", "url": "https://toxyscansoftware.net/fiche/435/435983_fr.pdf"}, {"name": "Spatter Block", "url": "https://toxyscansoftware.net/fiche/442/442031_fr.pdf"}, {"name": "SPECLT 6X312G +SSPR Silver Metallic", "url": "https://toxyscansoftware.net/fiche/308/308180_fr.pdf"}, {"name": "SPECLT 6X312G SSPR FLUORSCNT ORNG (EN)", "url": "https://toxyscansoftware.net/fiche/383/383794_en.pdf"}, {"name": "SPECLT 6X312G SSPR FROSTED SEA GLASS", "url": "https://toxyscansoftware.net/fiche/427/427494_fr.pdf"}, {"name": "SpecSeal Firestop Putty", "url": "https://toxyscansoftware.net/fiche/379/379177_fr.pdf"}, {"name": "Spectrus BD1501E", "url": "https://toxyscansoftware.net/fiche/336/336864_fr.pdf"}, {"name": "Stainless Steel", "url": "https://toxyscansoftware.net/fiche/304/304475_fr.pdf"}, {"name": "Stainless Steel Cleaner", "url": "https://toxyscansoftware.net/fiche/304/304617_fr.pdf"}, {"name": "Stainlesscut", "url": "https://toxyscansoftware.net/fiche/335/335022_fr.pdf"}, {"name": "Stanley - Craie Rouge", "url": "https://toxyscansoftware.net/fiche/305/305150_fr.pdf"}, {"name": "State Guardian Penetrant", "url": "https://toxyscansoftware.net/fiche/332/332742_fr.pdf"}, {"name": "Sterigel Gel Antiseptique - Alcool éthylique à 70% (104.11, 104.13, 104.22)", "url": "https://toxyscansoftware.net/fiche/300/300354_fr.pdf"}, {"name": "Stop Plus", "url": "https://toxyscansoftware.net/fiche/436/436553_fr.pdf"}, {"name": "Super 5", "url": "https://toxyscansoftware.net/fiche/399/399885_fr.pdf"}, {"name": "Super Adhésif en Spray, 320 g", "url": "https://toxyscansoftware.net/fiche/395/395238_fr.pdf"}, {"name": "Super Remover Adhesive Remover", "url": "https://toxyscansoftware.net/fiche/371/371715_fr.pdf"}, {"name": "Super-Adhésif Pour Bandes d'Étanchéité 3M, PN 80010", "url": "https://toxyscansoftware.net/fiche/323/323252_fr.pdf"}, {"name": "Supreme Platinum N Base 714503", "url": "https://toxyscansoftware.net/fiche/326/326943_fr.pdf"}, {"name": "Target Tap All", "url": "https://toxyscansoftware.net/fiche/306/306122_fr.pdf"}, {"name": "Technomelt Dorus KS 217 25KG", "url": "https://toxyscansoftware.net/fiche/401/401923_fr.pdf"}, {"name": "Teintures à l'eau Saman, Série TEW", "url": "https://toxyscansoftware.net/fiche/371/371740_fr.pdf"}, {"name": "Tekusolv Aérosol", "url": "https://toxyscansoftware.net/fiche/303/303885_fr.pdf"}, {"name": "Tekusolv II Plus Aerosol, M/M", "url": "https://toxyscansoftware.net/fiche/362/362442_fr.pdf"}, {"name": "Tel-X Plus Aerosol Sample, NAC MM", "url": "https://toxyscansoftware.net/fiche/304/304225_fr.pdf"}, {"name": "The right stuff gasket maker powerbead 7.5 OZ AE", "url": "https://toxyscansoftware.net/fiche/382/382392_fr.pdf"}, {"name": "Titeseal No 55", "url": "https://toxyscansoftware.net/fiche/371/371421_fr.pdf"}, {"name": "Tremclad Antirouille Jaune", "url": "https://toxyscansoftware.net/fiche/456/456183_fr.pdf"}, {"name": "Tremclad Rust Paint Spray Aluminium", "url": "https://toxyscansoftware.net/fiche/418/418225_fr.pdf"}, {"name": "Tremclad Rust Paint Spray Vert", "url": "https://toxyscansoftware.net/fiche/457/457235_fr.pdf"}, {"name": "Tremclad Rust Paint Spray Vrai Orange", "url": "https://toxyscansoftware.net/fiche/456/456843_fr.pdf"}, {"name": "Tremclad Vert Foncé", "url": "https://toxyscansoftware.net/fiche/397/397137_fr.pdf"}, {"name": "Tremco 12X340GM Noir Mat", "url": "https://toxyscansoftware.net/fiche/423/423087_fr.pdf"}, {"name": "TREMCO 6x340gm Blanc Mat", "url": "https://toxyscansoftware.net/fiche/422/422978_fr.pdf"}, {"name": "Trmcld +6X340G Sspr Grey Primer", "url": "https://toxyscansoftware.net/fiche/383/383512_fr.pdf"}, {"name": "Trmcld 6X340Gm Clear Gloss", "url": "https://toxyscansoftware.net/fiche/449/449436_fr.pdf"}, {"name": "TRMCLD 6x340GM Rouge Feu", "url": "https://toxyscansoftware.net/fiche/457/457233_fr.pdf"}, {"name": "TSP ECO Nettoyeur Concentré / Dégraisseur puissant", "url": "https://toxyscansoftware.net/fiche/408/408551_fr.pdf"}, {"name": "Tuf Grit II, MM", "url": "https://toxyscansoftware.net/fiche/436/436485_fr.pdf"}, {"name": "Vaporisateur Moussant Dégraissant pour Machine et Moteur WD-40 Specialist", "url": "https://toxyscansoftware.net/fiche/411/411739_fr.pdf"}, {"name": "Vaporisateur WD-40", "url": "https://toxyscansoftware.net/fiche/319/319555_fr.pdf"}, {"name": "Vert-2-Go all Purpose Cleaner", "url": "https://toxyscansoftware.net/fiche/378/378259_fr.pdf"}, {"name": "Vertex", "url": "https://toxyscansoftware.net/fiche/457/457087_fr.pdf"}, {"name": "Volisolve 251", "url": "https://toxyscansoftware.net/fiche/396/396316_fr.pdf"}, {"name": "Voltz II Red", "url": "https://toxyscansoftware.net/fiche/382/382875_fr.pdf"}, {"name": "X448 high temperature oil", "url": "https://toxyscansoftware.net/fiche/305/305353_fr.pdf"}, {"name": "Zerex Original Liquide de Refroidissement Antigel", "url": "https://toxyscansoftware.net/fiche/312/312442_fr.pdf"}, {"name": "ZINSSR +6X454G LSPR Covrsup Ceiling Pnt", "url": "https://toxyscansoftware.net/fiche/328/328120_fr.pdf"}]
+;
+
+const searchInput = document.getElementById('search');
+const clearBtn = document.getElementById('clearBtn');
+const resultsEl = document.getElementById('results');
+const emptyState = document.getElementById('emptyState');
+const hintState = document.getElementById('hintState');
+const resultCount = document.getElementById('resultCount');
+document.getElementById('totalCount').textContent = PRODUCTS.length;
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function highlight(name, terms){
+  let out = escapeHtml(name);
+  terms.forEach(t=>{
+    if(!t) return;
+    const re = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'ig');
+    out = out.replace(re, '<mark>$1</mark>');
+  });
+  return out;
+}
+
+function render(){
+  const raw = searchInput.value.trim();
+  clearBtn.style.display = raw ? 'block' : 'none';
+
+  if(!raw){
+    resultsEl.innerHTML = '';
+    emptyState.style.display = 'none';
+    hintState.style.display = 'block';
+    resultCount.textContent = '';
+    return;
+  }
+  hintState.style.display = 'none';
+
+  const terms = raw.toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = PRODUCTS.filter(p=>{
+    const n = p.name.toLowerCase();
+    return terms.every(t => n.includes(t));
+  }).slice(0, 100);
+
+  resultCount.textContent = matches.length + ' résultat' + (matches.length===1?'':'s') +
+    (matches.length===100 ? ' (100 premiers affichés — précisez votre recherche)' : '');
+
+  if(matches.length === 0){
+    resultsEl.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  resultsEl.innerHTML = matches.map(p => `
+    <li>
+      <a class="card" href="${p.url}" target="_blank" rel="noopener">
+        <p class="card-name">${highlight(p.name, terms)}</p>
+        <span class="arrow">&#8594;</span>
+      </a>
+    </li>
+  `).join('');
+}
+
+searchInput.addEventListener('input', render);
+clearBtn.addEventListener('click', ()=>{
+  searchInput.value = '';
+  searchInput.focus();
+  render();
+});
+render();
+</script>
+
+</body>
+</html>
