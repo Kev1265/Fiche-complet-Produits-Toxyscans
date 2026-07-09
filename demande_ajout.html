@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Demande d'ajout de produit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#00879A;
+    --teal-dark:#046374;
+    --coral:#EA4C74;
+    --coral-light:#FBE6EC;
+    --ink:#1B2B3A;
+    --paper:#F6F9FA;
+    --card:#FFFFFF;
+    --line:#E2E9EB;
+    --muted:#63767E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  header{
+    background:linear-gradient(120deg, var(--teal) 0%, var(--teal-dark) 55%, var(--coral) 130%);
+    color:#fff;
+    padding:26px 18px 28px;
+  }
+  .eyebrow{
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.85);
+    margin:0 0 6px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:7px;height:7px;
+    background:#fff;
+    border-radius:50%;
+    display:inline-block;
+  }
+  h1{
+    font-family:'Poppins',sans-serif;
+    font-weight:700;
+    font-size:22px;
+    letter-spacing:.01em;
+    margin:0;
+  }
+
+  main{
+    max-width:640px;
+    margin:0 auto;
+    padding:22px 16px 60px;
+  }
+
+  .intro-card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 20px;
+    margin-bottom:20px;
+  }
+  .intro-card p{
+    font-size:14px;
+    color:var(--muted);
+    line-height:1.55;
+    margin:0;
+  }
+
+  form{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 20px 24px;
+  }
+
+  .panel-label{
+    text-align:center;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:18px;
+  }
+
+  .field{ margin-bottom:16px; }
+  .row{ display:flex; gap:14px; }
+  .row .field{ flex:1; }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+  label .req{ color:var(--coral); }
+  input, textarea{
+    width:100%;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    padding:11px 13px;
+    border-radius:8px;
+    border:1.5px solid var(--line);
+    outline:none;
+    color:var(--ink);
+    background:#fff;
+  }
+  input:focus, textarea:focus{ border-color:var(--teal); }
+  textarea{ resize:vertical; min-height:90px; }
+
+  .submit-btn{
+    width:100%;
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    border-radius:9px;
+    font-family:'Poppins',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    padding:14px;
+    cursor:pointer;
+    margin-top:6px;
+    transition:background .12s ease;
+  }
+  .submit-btn:hover{ background:var(--teal-dark); }
+
+  .msg{
+    font-size:13px;
+    font-weight:600;
+    margin-top:14px;
+    padding:10px 12px;
+    border-radius:7px;
+    display:none;
+  }
+  .msg.show{ display:block; background:var(--coral-light); color:var(--coral); }
+
+  footer{
+    text-align:center;
+    font-size:12px;
+    color:var(--muted);
+    padding:22px 14px 10px;
+    line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Fiches produits &middot; Santé Québec</p>
+  <h1>Demande d'ajout de produit</h1>
+</header>
+
+<main>
+  <div class="intro-card">
+    <p>Ce produit n'est pas dans la liste? Remplissez ce formulaire &mdash; un courriel pré-rempli s'ouvrira dans votre application de courriel, prêt à envoyer. Le produit sera ajouté après vérification.</p>
+  </div>
+
+  <form id="requestForm" onsubmit="return false;">
+    <p class="panel-label">Info produit</p>
+
+    <div class="field">
+      <label for="nomContenant">Nom du contenant <span class="req">*</span></label>
+      <input type="text" id="nomContenant" required>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="fabricant">Fabricant</label>
+        <input type="text" id="fabricant">
+      </div>
+      <div class="field">
+        <label for="fournisseur">Fournisseur</label>
+        <input type="text" id="fournisseur">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="noProduit">No de produit (sur le contenant)</label>
+      <input type="text" id="noProduit">
+    </div>
+
+    <div class="field">
+      <label for="autresInfos">Autres informations pertinentes</label>
+      <textarea id="autresInfos"></textarea>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">Envoyer la demande par courriel</button>
+    <div class="msg" id="formMsg">Veuillez remplir au moins le nom du contenant.</div>
+  </form>
+
+  <footer>
+    Cette demande sera envoyée par courriel pour vérification et ajout à la liste.
+  </footer>
+</main>
+
+<script>
+const DEST_EMAIL = 'Kevin.martineau.cissslan@ssss.gouv.qc.ca';
+
+document.getElementById('submitBtn').addEventListener('click', () => {
+  const nom = document.getElementById('nomContenant').value.trim();
+  const fabricant = document.getElementById('fabricant').value.trim();
+  const fournisseur = document.getElementById('fournisseur').value.trim();
+  const noProduit = document.getElementById('noProduit').value.trim();
+  const autres = document.getElementById('autresInfos').value.trim();
+  const msg = document.getElementById('formMsg');
+
+  if(!nom){
+    msg.classList.add('show');
+    document.getElementById('nomContenant').focus();
+    return;
+  }
+  msg.classList.remove('show');
+
+  const subject = 'Demande d\'ajout de produit - ' + nom;
+  const bodyLines = [
+    'Nom du contenant : ' + nom,
+    'Fabricant : ' + (fabricant || '(non précisé)'),
+    'Fournisseur : ' + (fournisseur || '(non précisé)'),
+    'No de produit (sur le contenant) : ' + (noProduit || '(non précisé)'),
+    '',
+    'Autres informations pertinentes :',
+    (autres || '(aucune)')
+  ];
+  const body = bodyLines.join('\n');
+
+  const mailto = 'mailto:' + encodeURIComponent(DEST_EMAIL) +
+    '?subject=' + encodeURIComponent(subject) +
+    '&body=' + encodeURIComponent(body);
+
+  window.location.href = mailto;
+});
+</script>
+
+</body>
+</html>
