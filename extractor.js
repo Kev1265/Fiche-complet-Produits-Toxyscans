@@ -44,7 +44,7 @@
   overlay.id = '_txy_qr_overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,12,20,.93);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif';
   overlay.innerHTML = '<div style="background:#1a1d26;border:1px solid #2e3247;border-radius:8px;padding:32px 40px;max-width:480px;width:90%;text-align:center">' +
-    '<div style="font-size:22px;font-weight:900;color:#f5a623;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Extraction des liens QR (v2)</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#f5a623;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Extraction des liens QR (v3)</div>' +
     '<div id="_txy_qr_lbl" style="font-size:13px;color:#7a80a0;margin-bottom:8px">Initialisation...</div>' +
     '<div style="background:#0f1117;border:1px solid #2e3247;border-radius:100px;height:10px;overflow:hidden;margin:10px 0"><div id="_txy_qr_bar" style="background:linear-gradient(90deg,#f5a623,#ffc44d);height:100%;width:0%;border-radius:100px;transition:width .4s"></div></div>' +
     '<div id="_txy_qr_log" style="background:#0f1117;border:1px solid #2e3247;border-radius:6px;padding:12px;height:180px;overflow-y:auto;text-align:left;font-family:monospace;font-size:11px;color:#7a80a0;margin:12px 0;white-space:pre-wrap;word-break:break-all"></div>' +
@@ -105,7 +105,18 @@
     return code ? code.data : null;
   }
 
-  addLog(total + ' produits trouves — demarrage (v2, avec detection de changement)...\n');
+  addLog(total + ' produits trouves — demarrage (v3, avec detection de changement)...\n');
+
+  // Force the dropdown to a blank/neutral state first. Without this, if the
+  // page already defaults to showing product #1, selecting it "again" never
+  // triggers a visible change, so product #1 would incorrectly time out.
+  const blankOption = [...select.options].find(o => !o.value || o.value === '0');
+  if (blankOption) {
+    select.value = blankOption.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 600));
+  }
 
   let lastSrc = null;
   const initialImg = findQrImg();
