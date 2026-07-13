@@ -1,23 +1,40 @@
 /* =========================================================================
-   TOXYSCAN — AUTO-QUEUE QR LINK EXTRACTOR, BY SITE (v8)
+   TOXYSCAN — AUTO-QUEUE QR LINK EXTRACTOR, BY SITE, WITH DEDUP (v9)
    -------------------------------------------------------------------------
-   Same auto-queue memory as before, but back to ONE COMBO PER SITE (not
-   per Site+Departement) -- so you end up with ~63 CSVs instead of 300+,
-   one per site, each containing every departement/localisation/product
-   under that site.
+   Same auto-queue-by-site system as before, PLUS: keeps a permanent
+   "known products" dictionary (name -> decoded link) in localStorage that
+   grows across every run, every site, every reload. Before processing any
+   product, it checks this dictionary first -- if the product's name was
+   already captured (from this site or any earlier one), it's instantly
+   reused with NO wait/decode needed. Only genuinely new product names
+   trigger the slow wait+decode cycle.
 
-   FIRST RUN: builds the list of all Sites (fast, just reads the dropdown --
-   no need to iterate departments this time). Saves it to localStorage.
+   This means each successive site gets faster (most products repeat
+   across locations), AND you get a perfectly deduplicated master list for
+   free -- no merging CSVs by hand.
 
-   EVERY RUN AFTER: automatically picks the next un-processed site, runs
-   the full extraction for it (all departments/locations within),
-   downloads one CSV for that site, reloads the page after 5 seconds.
+   TO EXPORT THE MASTER DEDUPLICATED LIST at any time (even mid-run,
+   even without the Toxyscan page open, as long as it's the same browser
+   profile), run this separately in the console:
 
-   TO RESET (start over from site #1), run in console:
+     (function(){
+       const d = JSON.parse(localStorage.getItem('txy_known_products') || '{}');
+       const rows = Object.entries(d).map(([name,link]) =>
+         '"' + name.replace(/"/g,'""') + '","' + String(link).replace(/"/g,'""') + '"');
+       const csv = 'Product Name,Decoded Link\n' + rows.join('\n');
+       const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+       const a = document.createElement('a');
+       a.href = URL.createObjectURL(blob);
+       a.download = 'toxyscan_MASTER_DEDUP.csv';
+       document.body.appendChild(a); a.click(); document.body.removeChild(a);
+       console.log(Object.keys(d).length + ' produits uniques exportes.');
+     })();
+
+   TO RESET the known-products dictionary (start deduping from scratch):
+     localStorage.removeItem('txy_known_products');
+
+   TO RESET the site queue (start site progression from scratch):
      localStorage.removeItem('txy_site_queue');
-
-   TO CHECK PROGRESS at any time, run in console:
-     JSON.parse(localStorage.getItem('txy_site_queue')).currentIndex
 
    HOW TO USE: paste into DevTools Console (F12) / click your bookmark.
    Repeat after each auto-reload.
@@ -25,6 +42,7 @@
 
 (async () => {
   const STORAGE_KEY = 'txy_site_queue';
+  const PRODUCTS_KEY = 'txy_known_products';
 
   const siteSel   = document.getElementById('site-local');
   const deptSel   = document.getElementById('dept-local');
@@ -103,6 +121,19 @@
   const currentSite = queue.sites[queue.currentIndex];
   title.textContent = (queue.currentIndex + 1) + ' / ' + queue.sites.length;
   addLog(currentSite.text + '\n');
+
+  // ---- Load the persistent known-products dictionary ----
+  let knownProducts = {};
+  try {
+    const savedProducts = localStorage.getItem(PRODUCTS_KEY);
+    if (savedProducts) knownProducts = JSON.parse(savedProducts);
+  } catch (e) { knownProducts = {}; }
+  addLog(Object.keys(knownProducts).length + ' produit(s) deja connus (seront reutilises sans re-scan)\n');
+
+  function saveKnownProducts() {
+    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(knownProducts)); }
+    catch (e) { addLog('ATTENTION : impossible de sauvegarder le dictionnaire (stockage plein?)'); }
+  }
 
   // ---- Extraction helpers ----
   let lastIframeError = '';
@@ -200,6 +231,15 @@
           addLog('\n--- ' + comboLabel + ' (' + prods.length + ' produits) ---');
 
           for (const prodOpt of prods) {
+            const productKey = prodOpt.text.trim();
+
+            // ---- Dedup shortcut: skip the slow wait/decode entirely if we already have this product ----
+            if (Object.prototype.hasOwnProperty.call(knownProducts, productKey)) {
+              results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: knownProducts[productKey], status: 'OK (connu)' });
+              addLog('  CONNU ' + prodOpt.text);
+              continue;
+            }
+
             await setSelect(prodSel, prodOpt.value, 400);
             let data = await waitForLabelStable();
 
@@ -218,6 +258,10 @@
             try {
               const decoded = await decodeQr(data.qrSrc);
               results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: decoded || '', status: decoded ? 'OK' : 'Decodage echoue' });
+              if (decoded) {
+                knownProducts[productKey] = decoded;
+                saveKnownProducts();
+              }
               addLog('  ' + (decoded ? 'OK' : 'ECHEC') + ' ' + prodOpt.text);
             } catch (e) {
               results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Erreur: ' + e.message });
@@ -252,11 +296,14 @@
   queue.currentIndex += 1;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
 
-  const okCount = results.filter(r => r.status === 'OK').length;
+  const okCount = results.filter(r => r.status === 'OK' || r.status === 'OK (connu)').length;
+  const reusedCount = results.filter(r => r.status === 'OK (connu)').length;
+  const newCount = results.filter(r => r.status === 'OK').length;
   addLog('\n' + '='.repeat(40));
   addLog('Termine : ' + currentSite.text);
-  addLog('Liens OK : ' + okCount + ' / ' + results.length);
+  addLog('Liens OK : ' + okCount + ' / ' + results.length + ' (dont ' + reusedCount + ' reutilises, ' + newCount + ' nouveaux)');
   addLog('Progres global : ' + queue.currentIndex + ' / ' + queue.sites.length + ' sites');
+  addLog('Dictionnaire maitre : ' + Object.keys(knownProducts).length + ' produits uniques au total');
   addLog('='.repeat(40));
 
   if (queue.currentIndex >= queue.sites.length) {
