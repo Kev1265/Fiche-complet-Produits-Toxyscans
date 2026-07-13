@@ -1,33 +1,30 @@
 /* =========================================================================
-   TOXYSCAN — AUTO-QUEUE QR LINK EXTRACTOR (v7)
+   TOXYSCAN — AUTO-QUEUE QR LINK EXTRACTOR, BY SITE (v8)
    -------------------------------------------------------------------------
-   Remembers its place across page reloads using localStorage. No more
-   picking Site/Departement each time -- just click the bookmark, let it
-   process one combo, it reloads itself, then click the bookmark again for
-   the next one.
+   Same auto-queue memory as before, but back to ONE COMBO PER SITE (not
+   per Site+Departement) -- so you end up with ~63 CSVs instead of 300+,
+   one per site, each containing every departement/localisation/product
+   under that site.
 
-   FIRST RUN: builds a full queue of every Site x Departement combination
-   (this takes a minute or two by itself, just iterating the dropdowns --
-   no product processing yet). Saves it to localStorage.
+   FIRST RUN: builds the list of all Sites (fast, just reads the dropdown --
+   no need to iterate departments this time). Saves it to localStorage.
 
-   EVERY RUN AFTER: picks up the next un-processed combo in the queue,
-   extracts it, downloads a CSV, marks it done, reloads the page.
+   EVERY RUN AFTER: automatically picks the next un-processed site, runs
+   the full extraction for it (all departments/locations within),
+   downloads one CSV for that site, reloads the page after 5 seconds.
 
-   WHEN FINISHED: once every combo is done, it tells you and stops
-   reloading.
+   TO RESET (start over from site #1), run in console:
+     localStorage.removeItem('txy_site_queue');
 
-   TO RESET (start over from combo #1): run this in the console:
-     localStorage.removeItem('txy_extraction_queue');
+   TO CHECK PROGRESS at any time, run in console:
+     JSON.parse(localStorage.getItem('txy_site_queue')).currentIndex
 
-   TO CHECK PROGRESS at any time: run this in the console:
-     JSON.parse(localStorage.getItem('txy_extraction_queue')).currentIndex
-
-   HOW TO USE: paste into DevTools Console (F12), press Enter (or click
-   your bookmark). Repeat after each auto-reload.
+   HOW TO USE: paste into DevTools Console (F12) / click your bookmark.
+   Repeat after each auto-reload.
    ========================================================================= */
 
 (async () => {
-  const STORAGE_KEY = 'txy_extraction_queue';
+  const STORAGE_KEY = 'txy_site_queue';
 
   const siteSel   = document.getElementById('site-local');
   const deptSel   = document.getElementById('dept-local');
@@ -78,7 +75,7 @@
   function addLog(msg) { log.textContent += msg + '\n'; log.scrollTop = log.scrollHeight; }
   function setProgress(pct, label) { bar.style.width = pct + '%'; lbl.textContent = label; }
 
-  // ---- Load or build the queue ----
+  // ---- Load or build the site queue ----
   let queue = null;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -86,38 +83,28 @@
   } catch (e) { queue = null; }
 
   if (!queue) {
-    title.textContent = 'Construction de la liste (une seule fois)';
-    addLog('Aucune file trouvee — construction de la liste complete Site x Departement...\n');
     const sites = realOptions(siteSel);
-    const combos = [];
-    for (let i = 0; i < sites.length; i++) {
-      const s = sites[i];
-      setProgress(Math.round((i / sites.length) * 100), 'Lecture des departements : ' + s.text);
-      await setSelect(siteSel, s.value, 900);
-      const depts = realOptions(deptSel);
-      for (const d of depts) {
-        combos.push({ siteValue: s.value, siteText: s.text, deptValue: d.value, deptText: d.text });
-      }
-      addLog('OK ' + s.text + ' (' + depts.length + ' departement(s))');
-    }
-    queue = { currentIndex: 0, combos };
+    queue = {
+      currentIndex: 0,
+      sites: sites.map(s => ({ value: s.value, text: s.text }))
+    };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
-    addLog('\nFile construite : ' + combos.length + ' combinaison(s) Site x Departement au total.\n');
+    addLog('Nouvelle file creee : ' + queue.sites.length + ' site(s) au total.\n');
   }
 
-  if (queue.currentIndex >= queue.combos.length) {
+  if (queue.currentIndex >= queue.sites.length) {
     title.textContent = 'TERMINE !';
-    addLog('Toutes les combinaisons ont ete traitees (' + queue.combos.length + ' au total).');
+    addLog('Tous les sites ont ete traites (' + queue.sites.length + ' au total).');
     addLog('\nPour recommencer depuis le debut, executez dans la console :');
     addLog("localStorage.removeItem('" + STORAGE_KEY + "');");
     return;
   }
 
-  const current = queue.combos[queue.currentIndex];
-  title.textContent = (queue.currentIndex + 1) + ' / ' + queue.combos.length;
-  addLog(current.siteText + ' > ' + current.deptText + '\n');
+  const currentSite = queue.sites[queue.currentIndex];
+  title.textContent = (queue.currentIndex + 1) + ' / ' + queue.sites.length;
+  addLog(currentSite.text + '\n');
 
-  // ---- Extraction logic (same as before) ----
+  // ---- Extraction helpers ----
   let lastIframeError = '';
   function getLabelFrameDoc() {
     const iframe = document.getElementById('label-pdf');
@@ -181,74 +168,79 @@
 
   const results = [];
 
-  await setSelect(siteSel, current.siteValue, 1200);
-  await setSelect(deptSel, current.deptValue, 1000);
-  const souss = realOptions(sousSel);
-  const sousLoop = souss.length ? souss : [{ value: '', text: '(aucun)' }];
+  await setSelect(siteSel, currentSite.value, 1200);
+  const depts = realOptions(deptSel);
+  addLog(depts.length + ' departement(s) a traiter\n');
   let comboCount = 0;
 
-  for (const sousOpt of sousLoop) {
-    if (sousOpt.value) await setSelect(sousSel, sousOpt.value, 700);
-    const locales = realOptions(localeSel);
-    const localeLoop = locales.length ? locales : [{ value: '', text: '(aucun)' }];
+  for (const deptOpt of depts) {
+    await setSelect(deptSel, deptOpt.value, 1000);
+    const souss = realOptions(sousSel);
+    const sousLoop = souss.length ? souss : [{ value: '', text: '(aucun)' }];
 
-    for (const localeOpt of localeLoop) {
-      if (localeOpt.value) await setSelect(localeSel, localeOpt.value, 700);
-      const subes = realOptions(subeSel);
-      const subeLoop = subes.length ? subes : [{ value: '', text: '(aucun)' }];
+    for (const sousOpt of sousLoop) {
+      if (sousOpt.value) await setSelect(sousSel, sousOpt.value, 700);
+      const locales = realOptions(localeSel);
+      const localeLoop = locales.length ? locales : [{ value: '', text: '(aucun)' }];
 
-      for (const subeOpt of subeLoop) {
-        if (subeOpt.value) await setSelect(subeSel, subeOpt.value, 700);
+      for (const localeOpt of localeLoop) {
+        if (localeOpt.value) await setSelect(localeSel, localeOpt.value, 700);
+        const subes = realOptions(subeSel);
+        const subeLoop = subes.length ? subes : [{ value: '', text: '(aucun)' }];
 
-        const prods = realOptions(prodSel);
-        comboCount++;
-        const comboLabel = [sousOpt.text, localeOpt.text, subeOpt.text].join(' > ');
-        setProgress(Math.min(95, comboCount * 5), comboLabel);
-        if (prods.length === 0) continue;
+        for (const subeOpt of subeLoop) {
+          if (subeOpt.value) await setSelect(subeSel, subeOpt.value, 700);
 
-        addLog('\n--- ' + comboLabel + ' (' + prods.length + ' produits) ---');
+          const prods = realOptions(prodSel);
+          comboCount++;
+          const comboLabel = [deptOpt.text, sousOpt.text, localeOpt.text, subeOpt.text].join(' > ');
+          setProgress(Math.min(95, comboCount * 3), comboLabel);
+          if (prods.length === 0) continue;
 
-        for (const prodOpt of prods) {
-          await setSelect(prodSel, prodOpt.value, 400);
-          let data = await waitForLabelStable();
+          addLog('\n--- ' + comboLabel + ' (' + prods.length + ' produits) ---');
 
-          if (data && data._timedOut) {
-            await setSelect(prodSel, prodOpt.value, 500);
-            data = await waitForLabelStable();
+          for (const prodOpt of prods) {
+            await setSelect(prodSel, prodOpt.value, 400);
+            let data = await waitForLabelStable();
+
+            if (data && data._timedOut) {
+              await setSelect(prodSel, prodOpt.value, 500);
+              data = await waitForLabelStable();
+            }
+
+            if (!data || data._timedOut) {
+              results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Timeout - non detecte' });
+              addLog('  SKIP ' + prodOpt.text);
+              await new Promise(r => setTimeout(r, 2000));
+              continue;
+            }
+
+            try {
+              const decoded = await decodeQr(data.qrSrc);
+              results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: decoded || '', status: decoded ? 'OK' : 'Decodage echoue' });
+              addLog('  ' + (decoded ? 'OK' : 'ECHEC') + ' ' + prodOpt.text);
+            } catch (e) {
+              results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Erreur: ' + e.message });
+              addLog('  ERREUR ' + prodOpt.text + ': ' + e.message);
+            }
+            await new Promise(r => setTimeout(r, 700));
           }
-
-          if (!data || data._timedOut) {
-            results.push({ sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Timeout - non detecte' });
-            addLog('  SKIP ' + prodOpt.text);
-            await new Promise(r => setTimeout(r, 2000));
-            continue;
-          }
-
-          try {
-            const decoded = await decodeQr(data.qrSrc);
-            results.push({ sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: decoded || '', status: decoded ? 'OK' : 'Decodage echoue' });
-            addLog('  ' + (decoded ? 'OK' : 'ECHEC') + ' ' + prodOpt.text);
-          } catch (e) {
-            results.push({ sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Erreur: ' + e.message });
-            addLog('  ERREUR ' + prodOpt.text + ': ' + e.message);
-          }
-          await new Promise(r => setTimeout(r, 700));
         }
       }
     }
   }
 
-  // ---- Download CSV for this combo ----
+  // ---- Download CSV for this site ----
   setProgress(100, 'Termine — generation du CSV...');
   const header = 'Site,Departement,Sous-departement,Localisation,Sous-localisation,Produit,Decoded Link,Status\n';
   const rows = results.map(r => {
     const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
-    return [esc(current.siteText), esc(current.deptText), esc(r.sous), esc(r.locale), esc(r.sube), esc(r.produit), esc(r.link), esc(r.status)].join(',');
+    return [esc(currentSite.text), esc(r.dept), esc(r.sous), esc(r.locale), esc(r.sube), esc(r.produit), esc(r.link), esc(r.status)].join(',');
   }).join('\n');
   const csv = header + rows;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
-  const safeName = (current.siteText + '_' + current.deptText).trim().replace(/[\\\/*?:"<>|]/g, '_').slice(0, 80);
+  const safeName = currentSite.text.trim().replace(/[\\\/*?:"<>|]/g, '_').slice(0, 80);
   a.href = URL.createObjectURL(blob);
   a.download = 'toxyscan_' + String(queue.currentIndex + 1).padStart(3, '0') + '_' + safeName + '.csv';
   document.body.appendChild(a);
@@ -262,13 +254,13 @@
 
   const okCount = results.filter(r => r.status === 'OK').length;
   addLog('\n' + '='.repeat(40));
-  addLog('Termine : ' + current.siteText + ' > ' + current.deptText);
+  addLog('Termine : ' + currentSite.text);
   addLog('Liens OK : ' + okCount + ' / ' + results.length);
-  addLog('Progres global : ' + queue.currentIndex + ' / ' + queue.combos.length);
+  addLog('Progres global : ' + queue.currentIndex + ' / ' + queue.sites.length + ' sites');
   addLog('='.repeat(40));
 
-  if (queue.currentIndex >= queue.combos.length) {
-    addLog('\nTOUTES les combinaisons sont terminees ! Aucun autre rechargement.');
+  if (queue.currentIndex >= queue.sites.length) {
+    addLog('\nTOUS les sites sont termines ! Aucun autre rechargement.');
   } else {
     addLog('\nRechargement automatique dans 5 secondes... cliquez sur le signet apres le rechargement pour continuer.');
     await new Promise(r => setTimeout(r, 5000));
