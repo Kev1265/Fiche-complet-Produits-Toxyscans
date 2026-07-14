@@ -157,7 +157,7 @@
     } catch (e) { lastIframeError = 'Erreur lecture iframe: ' + e.message; return null; }
   }
 
-  async function waitForLabelStable(timeoutMs = 12000, intervalMs = 250, stableChecks = 2) {
+  async function waitForLabelStable(timeoutMs = 3000, intervalMs = 200, stableChecks = 2) {
     const start = Date.now();
     let lastKey = null, stableCount = 0, lastSeenNom = '';
     while (Date.now() - start < timeoutMs) {
@@ -241,17 +241,12 @@
             }
 
             await setSelect(prodSel, prodOpt.value, 400);
-            let data = await waitForLabelStable();
-
-            if (data && data._timedOut) {
-              await setSelect(prodSel, prodOpt.value, 500);
-              data = await waitForLabelStable();
-            }
+            const data = await waitForLabelStable();
 
             if (!data || data._timedOut) {
               results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Timeout - non detecte' });
               addLog('  SKIP ' + prodOpt.text);
-              await new Promise(r => setTimeout(r, 2000));
+              await new Promise(r => setTimeout(r, 300));
               continue;
             }
 
