@@ -153,21 +153,49 @@
     try {
       const nomEl = doc.getElementById('nom');
       const qrEl = doc.getElementById('qr');
-      return { nom: nomEl ? nomEl.textContent.trim() : '', qrSrc: qrEl ? qrEl.src : '' };
+      return {
+        nom: nomEl ? nomEl.textContent.trim() : '',
+        qrSrc: qrEl ? qrEl.src : '',
+        qrReady: !!(qrEl && qrEl.complete && qrEl.naturalWidth > 0)
+      };
     } catch (e) { lastIframeError = 'Erreur lecture iframe: ' + e.message; return null; }
   }
 
-  async function waitForLabelStable(timeoutMs = 3000, intervalMs = 200, stableChecks = 2) {
+  async function waitForLabelStable(timeoutMs = 5000, intervalMs = 200, nameStableChecks = 2) {
     const start = Date.now();
-    let lastKey = null, stableCount = 0, lastSeenNom = '';
+    let lastNom = null, nomStableCount = 0, forcedReload = false, lastSeenNom = '';
+
     while (Date.now() - start < timeoutMs) {
-      const data = getCurrentLabelData();
-      if (data && data.nom) lastSeenNom = data.nom;
-      if (data && data.nom && data.qrSrc) {
-        const key = data.nom + '|' + data.qrSrc;
-        if (key === lastKey) { stableCount++; if (stableCount >= stableChecks) return data; }
-        else { lastKey = key; stableCount = 1; }
-      } else { lastKey = null; stableCount = 0; }
+      const doc = getLabelFrameDoc();
+      if (doc) {
+        try {
+          const nomEl = doc.getElementById('nom');
+          const qrEl = doc.getElementById('qr');
+          const nom = nomEl ? nomEl.textContent.trim() : '';
+          if (nom) lastSeenNom = nom;
+
+          if (nom && nom === lastNom) nomStableCount++;
+          else { lastNom = nom; nomStableCount = nom ? 1 : 0; }
+
+          // Once the product NAME is confirmed stable (server has definitely
+          // registered the selection), check if the image actually loaded.
+          if (nom && nomStableCount >= nameStableChecks) {
+            const qrReady = !!(qrEl && qrEl.complete && qrEl.naturalWidth > 0);
+            if (qrReady) {
+              return { nom, qrSrc: qrEl.src };
+            }
+            // Name is confirmed correct but image never loaded -- the image
+            // request likely fired before the server had registered the
+            // selection. Force one fresh request now that we KNOW the
+            // server-side state is correct.
+            if (qrEl && !forcedReload) {
+              forcedReload = true;
+              const base = qrEl.src.split('?')[0];
+              qrEl.src = base + '?_forcereload=' + Date.now();
+            }
+          }
+        } catch (e) { lastIframeError = 'Erreur lecture iframe: ' + e.message; }
+      }
       await new Promise(r => setTimeout(r, intervalMs));
     }
     return { _timedOut: true, _lastSeenNom: lastSeenNom, _lastError: lastIframeError };
