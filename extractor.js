@@ -161,7 +161,7 @@
     } catch (e) { lastIframeError = 'Erreur lecture iframe: ' + e.message; return null; }
   }
 
-  async function waitForLabelStable(timeoutMs = 5000, intervalMs = 200, nameStableChecks = 2) {
+  async function waitForLabelStable(timeoutMs = 1000, intervalMs = 150, nameStableChecks = 2) {
     const start = Date.now();
     let lastNom = null, nomStableCount = 0, forcedReload = false, lastSeenNom = '';
 
@@ -274,7 +274,7 @@
             if (!data || data._timedOut) {
               results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Timeout - non detecte' });
               addLog('  SKIP ' + prodOpt.text);
-              await new Promise(r => setTimeout(r, 300));
+              await new Promise(r => setTimeout(r, 100));
               continue;
             }
 
