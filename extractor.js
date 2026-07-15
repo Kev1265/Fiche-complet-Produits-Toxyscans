@@ -291,7 +291,14 @@
             if (!data || data._timedOut) {
               results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Timeout - non detecte' });
               addLog('  SKIP ' + prodOpt.text);
-              skippedProducts[productKey] = true;
+              skippedProducts[productKey] = {
+                siteValue: currentSite.value, siteText: currentSite.text,
+                deptValue: deptOpt.value, deptText: deptOpt.text,
+                sousValue: sousOpt.value, sousText: sousOpt.text,
+                localeValue: localeOpt.value, localeText: localeOpt.text,
+                subeValue: subeOpt.value, subeText: subeOpt.text,
+                prodValue: prodOpt.value, prodText: prodOpt.text
+              };
               saveSkippedProducts();
               await new Promise(r => setTimeout(r, 100));
               continue;
@@ -308,7 +315,14 @@
                   saveSkippedProducts();
                 }
               } else {
-                skippedProducts[productKey] = true;
+                skippedProducts[productKey] = {
+                  siteValue: currentSite.value, siteText: currentSite.text,
+                  deptValue: deptOpt.value, deptText: deptOpt.text,
+                  sousValue: sousOpt.value, sousText: sousOpt.text,
+                  localeValue: localeOpt.value, localeText: localeOpt.text,
+                  subeValue: subeOpt.value, subeText: subeOpt.text,
+                  prodValue: prodOpt.value, prodText: prodOpt.text
+                };
                 saveSkippedProducts();
               }
               addLog('  ' + (decoded ? 'OK' : 'ECHEC') + ' ' + prodOpt.text);
