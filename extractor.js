@@ -43,6 +43,7 @@
 (async () => {
   const STORAGE_KEY = 'txy_site_queue';
   const PRODUCTS_KEY = 'txy_known_products';
+  const SKIPPED_KEY = 'txy_skipped_products';
 
   const siteSel   = document.getElementById('site-local');
   const deptSel   = document.getElementById('dept-local');
@@ -137,6 +138,18 @@
   function saveKnownProducts() {
     try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(knownProducts)); }
     catch (e) { addLog('ATTENTION : impossible de sauvegarder le dictionnaire (stockage plein?)'); }
+  }
+
+  // ---- Load the persistent "still failing" list (survives across runs/passes) ----
+  let skippedProducts = {};
+  try {
+    const savedSkips = localStorage.getItem(SKIPPED_KEY);
+    if (savedSkips) skippedProducts = JSON.parse(savedSkips);
+  } catch (e) { skippedProducts = {}; }
+
+  function saveSkippedProducts() {
+    try { localStorage.setItem(SKIPPED_KEY, JSON.stringify(skippedProducts)); }
+    catch (e) { /* non-critical */ }
   }
 
   // ---- Extraction helpers ----
@@ -278,6 +291,8 @@
             if (!data || data._timedOut) {
               results.push({ dept: deptOpt.text, sous: sousOpt.text, locale: localeOpt.text, sube: subeOpt.text, produit: prodOpt.text, link: '', status: 'Timeout - non detecte' });
               addLog('  SKIP ' + prodOpt.text);
+              skippedProducts[productKey] = true;
+              saveSkippedProducts();
               await new Promise(r => setTimeout(r, 100));
               continue;
             }
@@ -288,6 +303,13 @@
               if (decoded) {
                 knownProducts[productKey] = decoded;
                 saveKnownProducts();
+                if (skippedProducts[productKey]) {
+                  delete skippedProducts[productKey];
+                  saveSkippedProducts();
+                }
+              } else {
+                skippedProducts[productKey] = true;
+                saveSkippedProducts();
               }
               addLog('  ' + (decoded ? 'OK' : 'ECHEC') + ' ' + prodOpt.text);
             } catch (e) {
@@ -326,15 +348,29 @@
   const okCount = results.filter(r => r.status === 'OK' || r.status === 'OK (connu)').length;
   const reusedCount = results.filter(r => r.status === 'OK (connu)').length;
   const newCount = results.filter(r => r.status === 'OK').length;
+  const skippedThisRun = results.filter(r => r.status !== 'OK' && r.status !== 'OK (connu)').length;
   addLog('\n' + '='.repeat(40));
   addLog('Termine : ' + currentSite.text);
-  addLog('Liens OK : ' + okCount + ' / ' + results.length + ' (dont ' + reusedCount + ' reutilises, ' + newCount + ' nouveaux)');
+  addLog('Produits traites : ' + results.length);
+  addLog('  -> OK : ' + okCount + ' (' + reusedCount + ' reutilises, ' + newCount + ' nouveaux)');
+  addLog('  -> Ignores (skip) : ' + skippedThisRun);
   addLog('Progres global : ' + queue.currentIndex + ' / ' + queue.sites.length + ' sites');
-  addLog('Dictionnaire maitre : ' + Object.keys(knownProducts).length + ' produits uniques au total');
+  addLog('Dictionnaire maitre : ' + Object.keys(knownProducts).length + ' produits uniques reussis au total');
+  addLog('Produits encore en echec (toutes passes confondues) : ' + Object.keys(skippedProducts).length);
   addLog('='.repeat(40));
 
   if (queue.currentIndex >= queue.sites.length) {
     addLog('\nTOUS les sites sont termines ! Aucun autre rechargement.');
+    addLog('\n--- RESUME FINAL ---');
+    addLog('Produits uniques reussis : ' + Object.keys(knownProducts).length);
+    addLog('Produits toujours en echec : ' + Object.keys(skippedProducts).length);
+    if (Object.keys(skippedProducts).length > 0) {
+      addLog('\nListe des produits encore en echec :');
+      Object.keys(skippedProducts).forEach(name => addLog('  - ' + name));
+      addLog('\nConseil : videz la file (txy_site_queue) et relancez une autre');
+      addLog('passe -- seuls ces produits restants prendront du temps, le reste');
+      addLog('sera instantane grace au dictionnaire deja rempli.');
+    }
   } else {
     addLog('\nRechargement automatique dans 5 secondes... cliquez sur le signet apres le rechargement pour continuer.');
     await new Promise(r => setTimeout(r, 5000));
